@@ -1,7 +1,7 @@
 from collections import namedtuple, defaultdict, deque
 
 Edge = namedtuple("Edge", ["label", "weight", "connected_to"])
-
+ExpansionStep = namedtuple("ExpansionStep", ["vertex", "visited"])
 
 class Graph:
     def __init__(self):
@@ -26,19 +26,24 @@ class Graph:
         start_vertex = self._vertices[vertex_label]
         max_paths[start_vertex.label] = start_vertex.weight
 
-        expansion_frontier.appendleft(start_vertex.label)
+        expansion_frontier.appendleft(ExpansionStep(start_vertex.label, [start_vertex.label]))
 
         while expansion_frontier:
-            current_vertex_label = expansion_frontier.pop()
+            step = expansion_frontier.pop()
+            current_vertex_label, path = step.vertex, step.visited
             current_vertex = self._vertices[current_vertex_label]
             max_path_to_current = max_paths[current_vertex_label]
+
             for next_vertex_label in current_vertex.connected_to:
+                if next_vertex_label in path:
+                    raise Exception(f"Cycle detected: {path + [next_vertex_label]}")
+
                 next_vertex = self._vertices[next_vertex_label]
                 new_weight = max_path_to_current + next_vertex.weight
 
                 if new_weight > max_paths[next_vertex_label]:
                     max_paths[next_vertex_label] = new_weight
-                    expansion_frontier.extend(next_vertex.label)
+                    expansion_frontier.appendleft(ExpansionStep(next_vertex.label, path + [next_vertex.label]))
 
         return max(max_paths.values())
 
@@ -55,6 +60,7 @@ if __name__ == "__main__":
     graph.add_edge("A", "B")
     graph.add_edge("B", "C")
     graph.add_edge("A", "C")
+    # graph.add_edge("C", "A")  # uncomment to see cycle detection in action
 
     start_vertex = "A"
     actual_path_length = graph.find_optimal_path_from_vertex(start_vertex)
